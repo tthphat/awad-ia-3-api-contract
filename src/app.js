@@ -8,7 +8,13 @@ import { createV1 } from './v1.js';
 //           { error, message }. See CONTRACT.md §5 before touching it.
 //   /v1/…   the versioned API described in CONTRACT.md — src/v1.js.
 
-const legacyError = (res, status, code, message, headers) => send(res, status, { error: code, message }, headers);
+const LEGACY_HEADERS = {
+  Deprecation: '@1792022400',
+  Sunset: 'Thu, 31 Dec 2026 23:59:59 GMT',
+};
+
+const legacyError = (res, status, code, message, headers = {}) =>
+  send(res, status, { error: code, message }, { ...LEGACY_HEADERS, ...headers });
 const isPrice = (p) => typeof p === 'number' && Number.isFinite(p) && p > 0 && p <= 100000;
 
 export function createApp(db) {
@@ -23,38 +29,44 @@ export function createApp(db) {
   const v1 = createV1(db);
 
   async function legacy(req, res, url, h) {
+    const combinedHeaders = { ...LEGACY_HEADERS, ...h };
     const parts = url.pathname.split('/').filter(Boolean);
 
     if (parts[0] === 'menu' && parts.length === 1) {
       if (req.method === 'GET') {
         const limit = Math.min(Number(url.searchParams.get('limit') ?? 50), 200);
         const offset = Number(url.searchParams.get('offset') ?? 0);
-        return send(res, 200, q.list.all(limit, offset).map(legacyView), h);
+        return send(res, 200, q.list.all(limit, offset).map(legacyView), combinedHeaders);
       }
       if (req.method === 'POST') {
         let body; try { body = JSON.parse((await readRaw(req)) || '{}'); } catch { body = null; }
         if (!body || typeof body.name !== 'string' || !body.name || !isPrice(body.price))
-          return legacyError(res, 400, 'invalid_body', 'name (string) and price (thousands of dong) are required', h);
+          return legacyError(res, 400, 'invalid_body', 'name (string) and price (thousands of dong) are required', combinedHeaders);
         const { lastInsertRowid } = q.insert.run(body.name, Math.round(body.price * 1000));
-        return send(res, 201, legacyView(q.get.get(lastInsertRowid)), h);
+        return send(res, 201, legacyView(q.get.get(lastInsertRowid)), combinedHeaders);
       }
     }
 
     if (parts[0] === 'menu' && parts.length === 2) {
       const id = Number(parts[1]);
       const row = Number.isInteger(id) ? q.get.get(id) : undefined;
-      if (!row) return legacyError(res, 404, 'not_found', `menu item ${parts[1]} not found`, h);
-      if (req.method === 'GET') return send(res, 200, legacyView(row), h);
+      if (!row) return legacyError(res, 404, 'not_found', `menu item ${parts[1]} not found`, combinedHeaders);
+      if (req.method === 'GET') {
+        return send(res, 200, legacyView(row), {
+          ...combinedHeaders,
+          Link: `</v1/menu/${id}>; rel="successor-version"`
+        });
+      }
       if (req.method === 'PATCH') {
         let body; try { body = JSON.parse((await readRaw(req)) || '{}'); } catch { body = null; }
         if (!body || !isPrice(body.price))
-          return legacyError(res, 400, 'invalid_body', 'price (thousands of dong) is required', h);
+          return legacyError(res, 400, 'invalid_body', 'price (thousands of dong) is required', combinedHeaders);
         q.setPrice.run(Math.round(body.price * 1000), id);
-        return send(res, 200, legacyView(q.get.get(id)), h);
+        return send(res, 200, legacyView(q.get.get(id)), combinedHeaders);
       }
     }
 
-    return legacyError(res, 404, 'not_found', 'no such route', h);
+    return legacyError(res, 404, 'not_found', 'no such route', combinedHeaders);
   }
 
   async function handle(req, res) {
