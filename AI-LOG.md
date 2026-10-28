@@ -21,3 +21,11 @@ Sinh viên: 23120319 — Trương Thành Phát
 - **Changed**: Không có ở lượt này (giữ nguyên 100% code thô ban đầu của agent để chạy kiểm thử và lưu `contract-run-1.txt` theo đúng quy trình rubric).
 - **Rejected**: Không có ở lượt này (chưa bác bỏ đề xuất nào ở lần sinh mã đầu; các thay đổi và từ chối giải pháp của agent sẽ được ghi nhận chi tiết trong quá trình sửa lỗi ở Bước 6).
 - **By hand**: Tự đọc `CONTRACT.md` và viết 4 dự đoán kèm lý do sâu sắc vào `NOTES.md`, commit `NOTES.md` trước khi agent chạm vào `src/`; tự xử lý lỗi đường dẫn Windows trong `scripts/migrate.js` bằng `fileURLToPath` để migration chạy ổn định trên môi trường Windows.
+
+## 2026-10-28 — IA#3: Chẩn đoán lỗi môi trường POSIX path và chạy đối chiếu trên WSL/Linux
+- **Tool**: Antigravity (Gemini 3.8 Flash).
+- **Asked for**: "Instruct me how to re-run this test in wsl to check the error about POSIX path in test/contract.test.js"
+- **Kept**: Hướng dẫn chạy kiểm thử trong môi trường WSL Ubuntu để kiểm tra tính độc lập nền tảng; kết quả log kiểm thử `contract-run-1-linux.txt` đạt 29/29 tests pass.
+- **Changed**: Không sửa code trong `src/v1.js` hay `test/contract.test.js`, giữ nguyên vẹn logic ứng dụng và tài liệu kiểm thử theo đúng quy định rubric.
+- **Rejected**: Không có ở lượt này.
+- **By hand**: Tự mở WSL Ubuntu, điều hướng vào thư mục dự án và chạy `npm run contract` lưu ra `contract-run-1-linux.txt` làm bằng chứng thực nghiệm đối chiếu lỗi Windows.
