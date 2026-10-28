@@ -35,14 +35,35 @@
 
 ## 4. Sentences that could be read two ways
 
-_To fill in after asking the agent: "Which sentences of CONTRACT.md could be read two ways, and what did you choose for each?" At least one point must be found by me and not listed by the agent._
+The agent was asked: *"Which sentences of CONTRACT.md could be read two ways, and what did you choose for each?"* Below are the agent's listed points (A1–A3) and one critical point identified independently (A4, found by me).
 
-### A1 — CONTRACT §<section>
-- Reading A: <...>
-- Reading B: <...>
-- Agent chose: <A or B>
-- My decision: <A or B> — because <...>
-- Sentence I would add to CONTRACT.md: "<...>"
+### A1 — CONTRACT §2 & §4.2: Validation Error Accumulation vs. Short-Circuiting
+- Reading A: "The server checks, in this order, and stops at the first step that fails" could be taken to mean checking body fields sequentially and halting on the first broken field (e.g., stopping at `tableId` without inspecting `items`).
+- Reading B: The short-circuiting rule applies across numbered steps (1 through 6). Within step 4, the validator must inspect all fields and array elements concurrently, accumulating every error into `errors` ("listing every broken field" per §4.2 and "one entry per problem found" per §2) before stopping before step 5.
+- Agent chose: Reading B. Accumulated all invalid field pointers (`/tableId`, `/items/0/qty`, etc.) into a single `errors` array.
+- My decision: Reading B — because RFC 9457 and good API UX require returning all client-side validation errors in one response, avoiding frustrating trial-and-error round-trips for API consumers.
+- Sentence I would add to CONTRACT.md: "Within step 4, the validator must evaluate all body fields and array elements concurrently, accumulating every violation into the errors array before halting execution prior to step 5."
+
+### A2 — CONTRACT §4.4: Cursor Opacity and Statelessness
+- Reading A: "A cursor is opaque: the client stores it and sends it back unchanged, and never builds one" could mean an opaque session token or random identifier stored in a server-side cache/database session table.
+- Reading B: The cursor is opaque to clients but internally stateless (e.g., base64-encoded pagination metadata like `{"id": 29}`) that any server instance can decode and use directly against the database.
+- Agent chose: Reading B. Implemented as base64-encoded JSON `{ id }`.
+- My decision: Reading B — because session 4 emphasizes horizontal scaling across independent application processes. A stateless cursor allows any instance sharing the database to paginate without inter-process session replication.
+- Sentence I would add to CONTRACT.md: "The cursor must be stateless (such as base64-encoded pagination metadata) so that any server instance sharing the database can decode it without inter-process coordination."
+
+### A3 — CONTRACT §5: Scope of Deprecation and Sunset Headers
+- Reading A: "Every legacy response, errors included, carries these two headers" could be interpreted globally as applying `Deprecation` and `Sunset` headers to any non-`/v1` URL handled by the server (even unknown 404 paths like `/foo`).
+- Reading B: The headers apply specifically to routes mounted under the deprecated legacy surface (`/menu`, `/menu/:id`) across all their status codes (200, 400, 404, 500).
+- Agent chose: Reading B. Attached headers directly to the `/menu` routes.
+- My decision: Reading B — because RFC 9745 and RFC 8594 specify sunset and deprecation timelines for specific retiring resources/APIs, not for arbitrary nonexistent server paths.
+- Sentence I would add to CONTRACT.md: "The Deprecation and Sunset headers apply strictly to responses matching /menu routes, not to arbitrary non-existent paths."
+
+### A4 (found by me) — CONTRACT §4: Omission of Multi-Instance Deployment Architecture
+- Reading A: `CONTRACT.md` contains no mention of multi-instance or clustered deployments. A developer reading only the contract could reasonably implement idempotency tracking and in-flight locks using in-memory process state (`new Map()`, `Set`) for higher speed and simplicity.
+- Reading B: All idempotency keys, in-flight locks, and pagination state must be persisted in the shared SQLite database, because the service is expected to scale horizontally across multiple concurrent worker instances (as tested in test suite §4: "two instances, one database").
+- Agent chose: Reading B (stored keys in SQLite `idempotency_keys` table).
+- My decision: Reading B — because in modern web architecture (and as taught in Session 4/5 slides), web services run behind load balancers. In-memory locks fail when retries or subsequent page requests hit different instances.
+- Sentence I would add to CONTRACT.md: "The service may be deployed as multiple concurrent instances sharing the same database. All state required for idempotency verification, in-flight locking, and cursor pagination must reside entirely within the database, never in process memory."
 
 ## 5. Findings about tests or the contract
 
