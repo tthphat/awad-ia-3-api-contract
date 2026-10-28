@@ -29,3 +29,11 @@ Sinh viên: 23120319 — Trương Thành Phát
 - **Changed**: Không sửa code trong `src/v1.js` hay `test/contract.test.js`, giữ nguyên vẹn logic ứng dụng và tài liệu kiểm thử theo đúng quy định rubric.
 - **Rejected**: Không có ở lượt này.
 - **By hand**: Tự mở WSL Ubuntu, điều hướng vào thư mục dự án và chạy `npm run contract` lưu ra `contract-run-1-linux.txt` làm bằng chứng thực nghiệm đối chiếu lỗi Windows.
+
+## 2026-10-28 — IA#3: Phỏng vấn các câu có thể hiểu hai cách trong CONTRACT.md (Bước 7)
+- **Tool**: Antigravity (Gemini 3.8 Flash).
+- **Asked for**: "Which sentences of CONTRACT.md could be read two ways, and what did you choose for each?"
+- **Kept**: 3 điểm mơ hồ do agent phân tích (A1: Gom toàn bộ lỗi validation §2 & §4.2; A2: Cursor opaque dạng stateless base64 §4.4; A3: Phạm vi gắn header Deprecation/Sunset trên legacy `/menu` §5).
+- **Changed**: Tự viết lập luận phân tích cho phần quyết định của sinh viên (`My decision`) theo góc nhìn kiến trúc phân tán và API UX; bổ sung các câu đề xuất sửa đổi chuẩn xác vào `NOTES.md`.
+- **Rejected**: Không có ở lượt này.
+- **By hand**: Tự phát hiện và phân tích điểm A4 `(found by me)` về việc `CONTRACT.md` bỏ sót hoàn toàn đặc tả triển khai multi-instance dùng chung cơ sở dữ liệu (đã được đối chiếu qua bộ test `§4 two instances, one database`).
