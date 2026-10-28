@@ -20,18 +20,18 @@
 
 ## 2. First-run failures
 
-_To fill in after `contract-run-1.txt` is committed. One line per failing test:_
+`contract-run-1.txt`: 29 tests, 27 pass, 0 fail, 2 cancelled. Both cancelled tests are in the suite `§4 two instances, one database`, whose `before` hook failed (`npm run migrate failed: undefined`, `null !== 0`, test/contract.test.js:333,362) before they ran. The agent's behaviour on these two tests is therefore unknown from this run.
 
-- `<test name>` — CONTRACT §<section>: "<sentence>". Agent did: <what it did instead>. Suggested rewording: "<new sentence>" (only if the sentence can be read two ways).
+- `§4.2 a retry that lands on the other instance is still a replay` — CONTRACT §4.2: "That retry must not place a second order." Agent did: unknown, the test was cancelled by the suite before hook prior to execution. Hook failure cause: `test/contract.test.js:333` defines `const ROOT = new URL('..', import.meta.url).pathname;` which produces `/D:/...` on Windows, causing `spawnSync(process.execPath, ['scripts/migrate.js', 'up'], { cwd: ROOT, ... })` at line 362 to fail with an invalid working directory. Suggested rewording: the contract never explicitly says the service may run as several instances, so add: "The server may run as several instances sharing one database. Idempotency keys must be stored in the database, never in process memory."
+
+- `§4.4 a cursor from one instance works on the other` — CONTRACT §4.4: "A cursor is opaque: the client stores it and sends it back unchanged, and never builds one." Agent did: unknown, cancelled by the before hook prior to execution for the same reason. Suggested rewording: "A cursor must work on any instance sharing the database and must not depend on state held in one process."
 
 ## 3. Prediction outcomes
 
-_To fill in after the final run:_
-
-1. §4.2 order of checks: <came true / did not come true> — <what the agent actually did>.
-2. §4.4 `nextCursor` rule: <came true / did not come true> — <what the agent actually did>.
-3. §2 `not-found` (non-integer id, unknown `/v1` path): <came true / did not come true> — <...>.
-4. §4.2 "equal as JSON values": <came true / did not come true> — <...>.
+1. §4.2 order of checks: did not come true — test "the key is checked before the body" passed on the first run.
+2. §4.4 nextCursor rule: did not come true — test "nextCursor is null exactly when there is nothing more" passed on the first run.
+3. §2 not-found (non-integer id, unknown `/v1` path): did not come true — tests "an unknown /v1 path is a 404 problem" and "unknown or malformed id is 404 not-found" passed on the first run.
+4. §4.2 equal as JSON values: did not come true — test "the same body means the same JSON value" passed on the first run.
 
 ## 4. Sentences that could be read two ways
 
@@ -44,12 +44,10 @@ _To fill in after asking the agent: "Which sentences of CONTRACT.md could be rea
 - My decision: <A or B> — because <...>
 - Sentence I would add to CONTRACT.md: "<...>"
 
-### A2 — CONTRACT §<section> _(found by me)_
-- Reading A: <...>
-- Reading B: <...>
-- My decision: <...> — because <...>
-- Sentence I would add to CONTRACT.md: "<...>"
-
 ## 5. Findings about tests or the contract
 
-_If a test or the contract looks wrong, write it here. Do not edit `test/` or `CONTRACT.md`._
+1. **POSIX path assumption in `test/contract.test.js`**:
+   In `test/contract.test.js:333`, `const ROOT = new URL('..', import.meta.url).pathname;` evaluates to `/D:/...` on Windows. When passed to `spawnSync` at line 362 (`cwd: ROOT`), Windows rejects the path because of the leading slash, causing `m.status` to be `null` and failing `assert.equal(m.status, 0)` with `null !== 0`. Standard Node ESM code should use `fileURLToPath(new URL('..', import.meta.url))` from `node:url` for cross-platform compatibility.
+
+2. **Omission of multi-instance deployment in `CONTRACT.md`**:
+   `CONTRACT.md` never explicitly states that the service may run as multiple concurrent instances sharing one database. This requirement was taught in lecture slides (Sessions 4 & 5), but was omitted from the formal specification document.
